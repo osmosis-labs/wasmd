@@ -112,12 +112,15 @@ func MakeEncodingConfig(_ testing.TB) wasmappparams.EncodingConfig {
 	return encodingConfig
 }
 
+var minComissionRate, _ = sdk.NewDecFromStr("0.001")
+
 var TestingStakeParams = stakingtypes.Params{
 	UnbondingTime:     100,
 	MaxValidators:     10,
 	MaxEntries:        10,
 	HistoricalEntries: 10,
 	BondDenom:         "stake",
+	MinCommissionRate: minComissionRate,
 }
 
 type TestFaucet struct {
@@ -211,7 +214,7 @@ func createTestInput(
 		capabilitytypes.StoreKey, feegrant.StoreKey, authzkeeper.StoreKey,
 		types.StoreKey,
 	)
-	ms := store.NewCommitMultiStore(db)
+	ms := store.NewCommitMultiStore(db, log.NewNopLogger())
 	for _, v := range keys {
 		ms.MountStoreWithDB(v, sdk.StoreTypeIAVL, db)
 	}
