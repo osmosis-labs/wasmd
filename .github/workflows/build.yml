@@ -24,7 +24,7 @@ jobs:
 #        include:
 #          - targetos: windows
 #            arch: amd64
-    name: osmosis ${{ matrix.arch }} for ${{ matrix.targetos }}
+    name: wasmd ${{ matrix.arch }} for ${{ matrix.targetos }}
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2.1.4
@@ -43,7 +43,7 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: osmosisd ${{ matrix.targetos }} ${{ matrix.arch }}
-          path: cmd/osmosisd/osmosisd
+          path: cmd/wasmd/wasmd
 
   test:
     runs-on: ubuntu-latest
@@ -72,5 +72,5 @@ jobs:
           
       - uses: actions/upload-artifact@v2
         with:
-          name: osmosisd ${{ matrix.targetos }} ${{ matrix.arch }}
-          path: cmd/osmosisd/osmosisd
+          name: wasmd ${{ matrix.targetos }} ${{ matrix.arch }}
+          path: cmd/wasmd/wasmd
