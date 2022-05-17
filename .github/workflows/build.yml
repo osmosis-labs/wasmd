@@ -1,0 +1,76 @@
+name: Compile, run tests
+
+# Controls when the action will run.
+# This workflow runs on pushes to master & every Pull Requests. (Or when manually triggered)
+# This workflow runs on every commit and allows us to ensure that builds are working correctly. 
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# This workflow makes x86_64 binaries for mac, windows, and linux.
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64]
+        targetos: [darwin, linux]
+        include:
+          - targetos: darwin
+            arch: arm64
+#        include:
+#          - targetos: windows
+#            arch: amd64
+    name: wasmd ${{ matrix.arch }} for ${{ matrix.targetos }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2.1.4
+        with:
+          go-version: '^1.18'
+        env:
+          GOOS: ${{ matrix.targetos }}
+          GOARCH: ${{ matrix.arch }}
+
+      - name: Compile wasmd
+        run: |
+          go mod download
+          cd cmd/wasmd
+          go build .
+          
+      - uses: actions/upload-artifact@v2
+        with:
+          name: osmosisd ${{ matrix.targetos }} ${{ matrix.arch }}
+          path: cmd/wasmd/wasmd
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64]
+        targetos: [darwin, linux]
+        include:
+          - targetos: darwin
+            arch: arm64
+#        include:
+#          - targetos: windows
+#            arch: amd64
+    name: osmosis ${{ matrix.arch }} for ${{ matrix.targetos }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2.1.4
+        with:
+          go-version: '^1.18'
+        env:
+          GOOS: ${{ matrix.targetos }}
+          GOARCH: ${{ matrix.arch }}
+
+      - name: test wasmd
+        run: make test
+          
+      - uses: actions/upload-artifact@v2
+        with:
+          name: wasmd ${{ matrix.targetos }} ${{ matrix.arch }}
+          path: cmd/wasmd/wasmd
