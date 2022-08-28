@@ -9,7 +9,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	clienttypes "github.com/cosmos/ibc-go/v3/modules/core/02-client/types"
 	channeltypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
@@ -332,8 +331,7 @@ func TestBurnCoinMessageHandlerIntegration(t *testing.T) {
 
 	example := InstantiateHackatomExampleContract(t, ctx, keepers) // with deposit of 100 stake
 
-	before, err := keepers.BankKeeper.TotalSupply(sdk.WrapSDKContext(ctx), &banktypes.QueryTotalSupplyRequest{})
-	require.NoError(t, err)
+	before := keepers.BankKeeper.GetSupply(ctx, "denom")
 
 	specs := map[string]struct {
 		msg    wasmvmtypes.BurnMsg
@@ -388,7 +386,7 @@ func TestBurnCoinMessageHandlerIntegration(t *testing.T) {
 			}}
 
 			// when
-			_, err = k.execute(ctx, example.Contract, example.CreatorAddr, nil, nil)
+			_, err := k.execute(ctx, example.Contract, example.CreatorAddr, nil, nil)
 
 			// then
 			if spec.expErr {
@@ -398,9 +396,8 @@ func TestBurnCoinMessageHandlerIntegration(t *testing.T) {
 			require.NoError(t, err)
 
 			// and total supply reduced by burned amount
-			after, err := keepers.BankKeeper.TotalSupply(sdk.WrapSDKContext(ctx), &banktypes.QueryTotalSupplyRequest{})
-			require.NoError(t, err)
-			diff := before.Supply.Sub(after.Supply)
+			after := keepers.BankKeeper.GetSupply(ctx, "denom")
+			diff := before.Amount.Sub(after.Amount)
 			assert.Equal(t, sdk.NewCoins(sdk.NewCoin("denom", sdk.NewInt(100))), diff)
 		})
 	}

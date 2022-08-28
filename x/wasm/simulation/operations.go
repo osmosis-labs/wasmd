@@ -85,9 +85,9 @@ func SimulateMsgStoreCode(ak types.AccountKeeper, bk simulation.BankKeeper, wasm
 		ctx sdk.Context,
 		accs []simtypes.Account,
 		chainID string,
-	) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
+	) (simtypes.OperationMsg, []simtypes.FutureOperation, sdk.Result, error) {
 		if wasmKeeper.GetParams(ctx).CodeUploadAccess.Permission != types.AccessTypeEverybody {
-			return simtypes.NoOpMsg(types.ModuleName, types.MsgStoreCode{}.Type(), "no chain permission"), nil, nil
+			return simtypes.NoOpMsg(types.ModuleName, types.MsgStoreCode{}.Type(), "no chain permission"), nil, sdk.Result{}, nil
 		}
 
 		config := &types.AccessConfig{
@@ -127,7 +127,7 @@ func SimulateMsgInstantiateContract(ak types.AccountKeeper, bk simulation.BankKe
 		ctx sdk.Context,
 		accs []simtypes.Account,
 		chainID string,
-	) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
+	) (simtypes.OperationMsg, []simtypes.FutureOperation, sdk.Result, error) {
 		simAccount, _ := simtypes.RandomAcc(r, accs)
 
 		var codeID uint64
@@ -140,7 +140,7 @@ func SimulateMsgInstantiateContract(ak types.AccountKeeper, bk simulation.BankKe
 		})
 
 		if codeID == 0 {
-			return simtypes.NoOpMsg(types.ModuleName, types.MsgInstantiateContract{}.Type(), "no codes with permission available"), nil, nil
+			return simtypes.NoOpMsg(types.ModuleName, types.MsgInstantiateContract{}.Type(), "no codes with permission available"), nil, sdk.Result{}, nil
 		}
 
 		spendable := bk.SpendableCoins(ctx, simAccount.Address)
