@@ -126,7 +126,8 @@ replace (
 	// Use the cosmos-flavored keyring library
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.1.7-0.20210622111912-ef00f8ac3d76
 
-	// Our cosmos-sdk branch is:  https://github.com/osmosis-labs/cosmos-sdk v0.45.0x-osmo-v7
+	// Our cosmos-sdk branch is:  https://github.com/osmosis-labs/cosmos-sdk
+	// link to commit hash https://github.com/osmosis-labs/cosmos-sdk/commit/49f1dd400410964ea0b32e75362b4579cf4521fe
 	github.com/cosmos/cosmos-sdk => github.com/osmosis-labs/cosmos-sdk v0.45.1-0.20220828185038-49f1dd400410
 	// Use Osmosis fast iavl
 	github.com/cosmos/iavl => github.com/osmosis-labs/iavl v0.17.3-osmo-v7
