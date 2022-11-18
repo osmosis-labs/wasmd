@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/store"
+	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
 
 	wasmvmtypes "github.com/CosmWasm/wasmvm/types"
@@ -467,7 +468,7 @@ func TestQueryErrors(t *testing.T) {
 			mock := WasmVMQueryHandlerFn(func(ctx sdk.Context, caller sdk.AccAddress, request wasmvmtypes.QueryRequest) ([]byte, error) {
 				return nil, spec.src
 			})
-			ctx := sdk.Context{}.WithGasMeter(sdk.NewInfiniteGasMeter()).WithMultiStore(store.NewCommitMultiStore(dbm.NewMemDB()))
+			ctx := sdk.Context{}.WithGasMeter(sdk.NewInfiniteGasMeter()).WithMultiStore(store.NewCommitMultiStore(dbm.NewMemDB(), log.NewNopLogger()))
 			q := NewQueryHandler(ctx, mock, sdk.AccAddress{}, NewDefaultWasmGasRegister())
 			_, gotErr := q.Query(wasmvmtypes.QueryRequest{}, 1)
 			assert.Equal(t, spec.expErr, gotErr)
@@ -511,8 +512,16 @@ func (m mockWasmQueryKeeper) IsPinnedCode(ctx sdk.Context, codeID uint64) bool {
 }
 
 type bankKeeperMock struct {
+	GetSupplyFn      func(ctx sdk.Context, denom string) sdk.Coin
 	GetBalanceFn     func(ctx sdk.Context, addr sdk.AccAddress, denom string) sdk.Coin
 	GetAllBalancesFn func(ctx sdk.Context, addr sdk.AccAddress) sdk.Coins
+}
+
+func (m bankKeeperMock) GetSupply(ctx sdk.Context, denom string) sdk.Coin {
+	if m.GetSupplyFn == nil {
+		panic("not expected to be called")
+	}
+	return m.GetSupplyFn(ctx, denom)
 }
 
 func (m bankKeeperMock) GetBalance(ctx sdk.Context, addr sdk.AccAddress, denom string) sdk.Coin {

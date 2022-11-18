@@ -8,56 +8,71 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cosmos/cosmos-sdk/x/params/client/utils"
-
 	wasmvm "github.com/CosmWasm/wasmvm"
-
-	"github.com/CosmWasm/wasmd/x/wasm/keeper/wasmtesting"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	"github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	"github.com/cosmos/cosmos-sdk/x/params/types/proposal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/CosmWasm/wasmd/x/wasm/keeper/wasmtesting"
 	"github.com/CosmWasm/wasmd/x/wasm/types"
 )
 
 func TestStoreCodeProposal(t *testing.T) {
-	ctx, keepers := CreateTestInput(t, false, "staking")
+	parentCtx, keepers := CreateTestInput(t, false, "staking")
 	govKeeper, wasmKeeper := keepers.GovKeeper, keepers.WasmKeeper
-	wasmKeeper.SetParams(ctx, types.Params{
+	wasmKeeper.SetParams(parentCtx, types.Params{
 		CodeUploadAccess:             types.AllowNobody,
 		InstantiateDefaultPermission: types.AccessTypeNobody,
 	})
 	wasmCode, err := os.ReadFile("./testdata/hackatom.wasm")
 	require.NoError(t, err)
 
-	myActorAddress := RandomBech32AccountAddress(t)
+	specs := map[string]struct {
+		codeID    int64
+		unpinCode bool
+	}{
+		"upload with pinning (default)": {
+			unpinCode: false,
+		},
+		"upload with code unpin": {
+			unpinCode: true,
+		},
+	}
 
-	src := types.StoreCodeProposalFixture(func(p *types.StoreCodeProposal) {
-		p.RunAs = myActorAddress
-		p.WASMByteCode = wasmCode
-	})
+	for msg, spec := range specs {
+		t.Run(msg, func(t *testing.T) {
+			ctx, _ := parentCtx.CacheContext()
+			myActorAddress := RandomBech32AccountAddress(t)
 
-	// when stored
-	storedProposal, err := govKeeper.SubmitProposal(ctx, src)
-	require.NoError(t, err)
+			src := types.StoreCodeProposalFixture(func(p *types.StoreCodeProposal) {
+				p.RunAs = myActorAddress
+				p.WASMByteCode = wasmCode
+				p.UnpinCode = spec.unpinCode
+			})
 
-	// and proposal execute
-	handler := govKeeper.Router().GetRoute(storedProposal.ProposalRoute())
-	err = handler(ctx, storedProposal.GetContent())
-	require.NoError(t, err)
+			// when stored
+			storedProposal, err := govKeeper.SubmitProposal(ctx, src, false)
+			require.NoError(t, err)
 
-	// then
-	cInfo := wasmKeeper.GetCodeInfo(ctx, 1)
-	require.NotNil(t, cInfo)
-	assert.Equal(t, myActorAddress, cInfo.Creator)
-	assert.True(t, wasmKeeper.IsPinnedCode(ctx, 1))
+			// and proposal execute
+			handler := govKeeper.Router().GetRoute(storedProposal.ProposalRoute())
+			err = handler(ctx, storedProposal.GetContent())
+			require.NoError(t, err)
 
-	storedCode, err := wasmKeeper.GetByteCode(ctx, 1)
-	require.NoError(t, err)
-	assert.Equal(t, wasmCode, storedCode)
+			// then
+			cInfo := wasmKeeper.GetCodeInfo(ctx, 1)
+			require.NotNil(t, cInfo)
+			assert.Equal(t, myActorAddress, cInfo.Creator)
+			assert.Equal(t, !spec.unpinCode, wasmKeeper.IsPinnedCode(ctx, 1))
+
+			storedCode, err := wasmKeeper.GetByteCode(ctx, 1)
+			require.NoError(t, err)
+			assert.Equal(t, wasmCode, storedCode)
+		})
+	}
 }
 
 func TestInstantiateProposal(t *testing.T) {
@@ -89,7 +104,7 @@ func TestInstantiateProposal(t *testing.T) {
 	em := sdk.NewEventManager()
 
 	// when stored
-	storedProposal, err := govKeeper.SubmitProposal(ctx, src)
+	storedProposal, err := govKeeper.SubmitProposal(ctx, src, false)
 	require.NoError(t, err)
 
 	// and proposal execute
@@ -148,7 +163,7 @@ func TestInstantiateProposal_NoAdmin(t *testing.T) {
 		p.Admin = "invalid"
 		p.Label = "testing"
 	})
-	_, err = govKeeper.SubmitProposal(ctx, src)
+	_, err = govKeeper.SubmitProposal(ctx, src, false)
 	require.Error(t, err)
 
 	// test with no admin
@@ -161,7 +176,7 @@ func TestInstantiateProposal_NoAdmin(t *testing.T) {
 	em := sdk.NewEventManager()
 
 	// when stored
-	storedProposal, err := govKeeper.SubmitProposal(ctx, src)
+	storedProposal, err := govKeeper.SubmitProposal(ctx, src, false)
 	require.NoError(t, err)
 
 	// and proposal execute
@@ -211,9 +226,9 @@ func TestMigrateProposal(t *testing.T) {
 	require.NoError(t, wasmKeeper.importCode(ctx, 2, codeInfoFixture, wasmCode))
 
 	var (
-		anyAddress   sdk.AccAddress = bytes.Repeat([]byte{0x1}, types.ContractAddrLen)
-		otherAddress sdk.AccAddress = bytes.Repeat([]byte{0x2}, types.ContractAddrLen)
-		contractAddr                = BuildContractAddress(1, 1)
+		anyAddress   = DeterministicAccountAddress(t, 1)
+		otherAddress = DeterministicAccountAddress(t, 2)
+		contractAddr = BuildContractAddressClassic(1, 1)
 	)
 
 	contractInfoFixture := types.ContractInfoFixture(func(c *types.ContractInfo) {
@@ -242,7 +257,7 @@ func TestMigrateProposal(t *testing.T) {
 	em := sdk.NewEventManager()
 
 	// when stored
-	storedProposal, err := govKeeper.SubmitProposal(ctx, &src)
+	storedProposal, err := govKeeper.SubmitProposal(ctx, &src, false)
 	require.NoError(t, err)
 
 	// and proposal execute
@@ -305,7 +320,7 @@ func TestExecuteProposal(t *testing.T) {
 	em := sdk.NewEventManager()
 
 	// fails on store - this doesn't have permission
-	storedProposal, err := govKeeper.SubmitProposal(ctx, &badSrc)
+	storedProposal, err := govKeeper.SubmitProposal(ctx, &badSrc, false)
 	require.Error(t, err)
 	// balance should not change
 	bal = bankKeeper.GetBalance(ctx, contractAddr, "denom")
@@ -323,7 +338,7 @@ func TestExecuteProposal(t *testing.T) {
 	em = sdk.NewEventManager()
 
 	// when stored
-	storedProposal, err = govKeeper.SubmitProposal(ctx, &src)
+	storedProposal, err = govKeeper.SubmitProposal(ctx, &src, false)
 	require.NoError(t, err)
 
 	// and proposal execute
@@ -374,7 +389,7 @@ func TestSudoProposal(t *testing.T) {
 	em := sdk.NewEventManager()
 
 	// when stored
-	storedProposal, err := govKeeper.SubmitProposal(ctx, &src)
+	storedProposal, err := govKeeper.SubmitProposal(ctx, &src, false)
 	require.NoError(t, err)
 
 	// and proposal execute
@@ -392,7 +407,7 @@ func TestSudoProposal(t *testing.T) {
 func TestAdminProposals(t *testing.T) {
 	var (
 		otherAddress sdk.AccAddress = bytes.Repeat([]byte{0x2}, types.ContractAddrLen)
-		contractAddr                = BuildContractAddress(1, 1)
+		contractAddr                = BuildContractAddressClassic(1, 1)
 	)
 	wasmCode, err := os.ReadFile("./testdata/hackatom.wasm")
 	require.NoError(t, err)
@@ -459,7 +474,7 @@ func TestAdminProposals(t *testing.T) {
 
 			require.NoError(t, wasmKeeper.importContract(ctx, contractAddr, &spec.state, []types.Model{}))
 			// when stored
-			storedProposal, err := govKeeper.SubmitProposal(ctx, spec.srcProposal)
+			storedProposal, err := govKeeper.SubmitProposal(ctx, spec.srcProposal, false)
 			require.NoError(t, err)
 
 			// and execute proposal
@@ -556,7 +571,7 @@ func TestUpdateParamsProposal(t *testing.T) {
 				Changes:     jsonProposal.Changes.ToParamChanges(),
 			}
 			// when stored
-			storedProposal, err := govKeeper.SubmitProposal(ctx, &proposal)
+			storedProposal, err := govKeeper.SubmitProposal(ctx, &proposal, false)
 			require.NoError(t, err)
 
 			// and proposal execute
@@ -639,7 +654,7 @@ func TestPinCodesProposal(t *testing.T) {
 			}
 
 			// when stored
-			storedProposal, gotErr := govKeeper.SubmitProposal(ctx, &proposal)
+			storedProposal, gotErr := govKeeper.SubmitProposal(ctx, &proposal, false)
 			if spec.expErr {
 				require.Error(t, gotErr)
 				return
@@ -727,7 +742,7 @@ func TestUnpinCodesProposal(t *testing.T) {
 			}
 
 			// when stored
-			storedProposal, gotErr := govKeeper.SubmitProposal(ctx, &proposal)
+			storedProposal, gotErr := govKeeper.SubmitProposal(ctx, &proposal, false)
 			if spec.expErr {
 				require.Error(t, gotErr)
 				return
@@ -821,7 +836,7 @@ func TestUpdateInstantiateConfigProposal(t *testing.T) {
 			}
 
 			// when stored
-			storedProposal, gotErr := govKeeper.SubmitProposal(ctx, &proposal)
+			storedProposal, gotErr := govKeeper.SubmitProposal(ctx, &proposal, false)
 			if spec.expErr {
 				require.Error(t, gotErr)
 				return

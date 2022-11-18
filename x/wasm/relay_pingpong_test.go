@@ -110,7 +110,8 @@ func TestPinPong(t *testing.T) {
 		require.NoError(t, err)
 
 		// switch side
-		require.Len(t, chainB.PendingSendPackets, 1)
+		fmt.Println(chainB.PendingSendPackets[0].SourcePort)
+		require.Equal(t, numUniquePackets(chainB.PendingSendPackets), 1)
 		err = coordinator.RelayAndAckPendingPackets(path.Invert())
 		require.NoError(t, err)
 	}
@@ -127,6 +128,18 @@ func TestPinPong(t *testing.T) {
 	assert.Equal(t, uint64(rounds), pongContract.QueryState(sentBallsCountKey))
 	assert.Equal(t, uint64(rounds), pongContract.QueryState(receivedBallsCountKey))
 	assert.Equal(t, uint64(rounds), pongContract.QueryState(confirmedBallsCountKey))
+}
+
+func numUniquePackets(ps []channeltypes.Packet) int {
+	count := 0
+	lastSeq := uint64(1 << 63)
+	for _, p := range ps {
+		if p.Sequence != lastSeq {
+			lastSeq = p.Sequence
+			count += 1
+		}
+	}
+	return count
 }
 
 var _ wasmtesting.IBCContractCallbacks = &player{}

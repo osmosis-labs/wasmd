@@ -17,6 +17,7 @@ import (
 	"github.com/spf13/cobra"
 	flag "github.com/spf13/pflag"
 
+	"github.com/CosmWasm/wasmd/x/wasm/keeper"
 	"github.com/CosmWasm/wasmd/x/wasm/types"
 )
 
@@ -39,6 +40,7 @@ func GetQueryCmd() *cobra.Command {
 		GetCmdListPinnedCode(),
 		GetCmdLibVersion(),
 		GetCmdQueryParams(),
+		GetCmdBuildAddress(),
 	)
 	return queryCmd
 }
@@ -60,6 +62,47 @@ func GetCmdLibVersion() *cobra.Command {
 			return nil
 		},
 	}
+	return cmd
+}
+
+// GetCmdBuildAddress build a contract address
+func GetCmdBuildAddress() *cobra.Command {
+	decoder := newArgDecoder(hex.DecodeString)
+	cmd := &cobra.Command{
+		Use:     "build-address [code-hash] [creator-address] [salt-hex-encoded] [json_encoded_init_args (required when set as fixed)]",
+		Short:   "build contract address",
+		Aliases: []string{"address"},
+		Args:    cobra.RangeArgs(3, 4),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			codeHash, err := hex.DecodeString(args[0])
+			if err != nil {
+				return fmt.Errorf("code-hash: %s", err)
+			}
+			creator, err := sdk.AccAddressFromBech32(args[1])
+			if err != nil {
+				return fmt.Errorf("creator: %s", err)
+			}
+			salt, err := hex.DecodeString(args[2])
+			switch {
+			case err != nil:
+				return fmt.Errorf("salt: %s", err)
+			case len(salt) == 0:
+				return errors.New("empty salt")
+			}
+
+			if len(args) == 3 {
+				cmd.Println(keeper.BuildContractAddressPredictable(codeHash, creator, salt, []byte{}).String())
+				return nil
+			}
+			msg := types.RawContractMessage(args[3])
+			if err := msg.ValidateBasic(); err != nil {
+				return fmt.Errorf("init message: %s", err)
+			}
+			cmd.Println(keeper.BuildContractAddressPredictable(codeHash, creator, salt, msg).String())
+			return nil
+		},
+	}
+	decoder.RegisterFlags(cmd.PersistentFlags(), "salt")
 	return cmd
 }
 
@@ -116,6 +159,9 @@ func GetCmdListContractByCode() *cobra.Command {
 			codeID, err := strconv.ParseUint(args[0], 10, 64)
 			if err != nil {
 				return err
+			}
+			if codeID == 0 {
+				return errors.New("empty code id")
 			}
 
 			pageReq, err := client.ReadPageRequest(withPageKeyDecoded(cmd.Flags()))
@@ -494,7 +540,7 @@ func newArgDecoder(def func(string) ([]byte, error)) *argumentDecoder {
 
 func (a *argumentDecoder) RegisterFlags(f *flag.FlagSet, argName string) {
 	f.BoolVar(&a.asciiF, "ascii", false, "ascii encoded "+argName)
-	f.BoolVar(&a.hexF, "hex", false, "hex encoded  "+argName)
+	f.BoolVar(&a.hexF, "hex", false, "hex encoded "+argName)
 	f.BoolVar(&a.b64F, "b64", false, "base64 encoded "+argName)
 }
 
