@@ -154,3 +154,13 @@ func (ws *WasmSnapshotter) processAllItems(
 
 	return item, finalize(ctx, ws.wasm)
 }
+
+// Keeping for compatibility with cosmos-sdk 0.45. This was removed in wasmd because they're using cosmos-sdk 0.46
+func (ws *WasmSnapshotter) SetSnapshotInterval(snapshotInterval uint64) {
+	// noop
+}
+
+// Keeping for compatibility with cosmos-sdk 0.45. This was removed in wasmd because they're using cosmos-sdk 0.46
+func (ws *WasmSnapshotter) PruneSnapshotHeight(height int64) {
+	// noop
+}
