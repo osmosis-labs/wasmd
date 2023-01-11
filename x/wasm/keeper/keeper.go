@@ -125,7 +125,7 @@ func NewKeeper(
 	availableCapabilities string,
 	opts ...Option,
 ) Keeper {
-	wasmer, err := wasmvm.NewVM(filepath.Join(homeDir, "wasm"), availableCapabilities, contractMemoryLimit, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize)
+	wasmer, err := wasmvm.NewVM(filepath.Join(homeDir, "wasm"), availableCapabilities, contractMemoryLimit, true, wasmConfig.MemoryCacheSize)
 	if err != nil {
 		panic(err)
 	}
