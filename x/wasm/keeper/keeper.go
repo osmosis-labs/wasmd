@@ -422,11 +422,14 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	// prepare querier
 	querier := k.newQueryHandler(ctx, contractAddress)
 	gas := k.runtimeGasForContract(ctx)
+	fmt.Println("executing msg: ", string(msg))
 	res, gasUsed, execErr := k.wasmVM.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, k.gasMeter(ctx), gas, costJSONDeserialization)
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if execErr != nil {
+		fmt.Println("execErr: ", execErr)
 		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
 	}
+	fmt.Println("res: ", res)
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventTypeExecute,
