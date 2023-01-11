@@ -14,7 +14,7 @@ import (
 const (
 	defaultMemoryCacheSize    uint32 = 100 // in MiB
 	defaultSmartQueryGasLimit uint64 = 3_000_000
-	defaultContractDebugMode         = false
+	defaultContractDebugMode         = true
 
 	// ContractAddrLen defines a valid address length for contracts
 	ContractAddrLen = 32
