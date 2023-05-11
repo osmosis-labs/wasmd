@@ -3,6 +3,7 @@ package keeper
 import (
 	"bytes"
 	"fmt"
+	"reflect"
 	"sort"
 
 	wasmvmtypes "github.com/CosmWasm/wasmvm/types"
@@ -147,6 +148,22 @@ func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk
 		} else {
 			// Issue #759 - we don't return error string for worries of non-determinism
 			moduleLogger(ctx).Info("Redacting submessage error", "cause", err)
+
+			// Emiting the errors to provide useful information to the end-users
+			// see: https://github.com/CosmWasm/wasmd/issues/1122
+			msgType := getMsgType(msg.Msg)
+			attrs := []sdk.Attribute{
+				sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddr.String()),
+				sdk.NewAttribute(types.AttributeKeySubMsgError, err.Error()),
+				sdk.NewAttribute(types.AttributeKeyMsgtype, msgType),
+			}
+			if msgType == "Stargate" {
+				attrs = append(attrs, sdk.NewAttribute(types.AttributeKeyStargateTypeUrl, msg.Msg.Stargate.TypeURL))
+			}
+
+			event := sdk.NewEvent(types.CustomContractEventPrefix+types.EventTypeRedactedError, attrs...)
+			ctx.EventManager().EmitEvent(event)
+
 			result = wasmvmtypes.SubMsgResult{
 				Err: redactError(err).Error(),
 			}
@@ -186,6 +203,23 @@ func redactError(err error) error {
 	// (we can theoretically redact less in the future, but this is a first step to safety)
 	codespace, code, _ := sdkerrors.ABCIInfo(err, false)
 	return fmt.Errorf("codespace: %s, code: %d", codespace, code)
+}
+
+func getMsgType(msg wasmvmtypes.CosmosMsg) string {
+	msgValue := reflect.ValueOf(msg)
+
+	for i := 0; i < msgValue.NumField(); i++ {
+		fieldValue := msgValue.Field(i)
+		fieldType := msgValue.Type().Field(i)
+
+		if fieldValue.IsNil() {
+			continue
+		}
+
+		return fieldType.Name
+	}
+
+	return "invalid message"
 }
 
 func filterEvents(events []sdk.Event) []sdk.Event {
