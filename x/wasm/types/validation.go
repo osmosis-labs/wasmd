@@ -59,7 +59,7 @@ func ValidateVerificationInfo(source, builder string, codeHash []byte) error {
 	// if any set require others to be set
 	if len(source) != 0 || len(builder) != 0 || codeHash != nil {
 		if source == "" {
-			return fmt.Errorf("source is required")
+			return fmt.Errorf("code source url is required")
 		}
 		if _, err := url.ParseRequestURI(source); err != nil {
 			return fmt.Errorf("source: %s", err)

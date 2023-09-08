@@ -114,7 +114,7 @@ func parseVerificationFlags(gzippedWasm []byte, flags *flag.FlagSet) (string, st
 	// if any set require others to be set
 	if len(source) != 0 || len(builder) != 0 || len(codeHash) != 0 {
 		if source == "" {
-			return "", "", nil, fmt.Errorf("source is required")
+			return "", "", nil, fmt.Errorf("code source url is required")
 		}
 		if _, err = url.ParseRequestURI(source); err != nil {
 			return "", "", nil, fmt.Errorf("source: %s", err)
