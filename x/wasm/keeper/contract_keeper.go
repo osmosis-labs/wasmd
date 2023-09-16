@@ -32,6 +32,7 @@ type decoratedKeeper interface {
 	setContractInfoExtension(ctx sdk.Context, contract sdk.AccAddress, extra types.ContractInfoExtension) error
 	setAccessConfig(ctx sdk.Context, codeID uint64, caller sdk.AccAddress, newConfig types.AccessConfig, autz AuthorizationPolicy) error
 	ClassicAddressGenerator() AddressGenerator
+	PredicableAddressGenerator(creator sdk.AccAddress, salt []byte, msg []byte, fixMsg bool) AddressGenerator
 }
 
 type PermissionedKeeper struct {
@@ -86,7 +87,7 @@ func (p PermissionedKeeper) Instantiate2(
 		initMsg,
 		label,
 		deposit,
-		PredicableAddressGenerator(creator, salt, initMsg, fixMsg),
+		p.nested.PredicableAddressGenerator(creator, salt, initMsg, fixMsg),
 		p.authZPolicy,
 	)
 }

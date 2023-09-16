@@ -22,11 +22,15 @@ func (k Keeper) ClassicAddressGenerator() AddressGenerator {
 }
 
 // PredicableAddressGenerator generates a predictable contract address
-func PredicableAddressGenerator(creator sdk.AccAddress, salt []byte, msg []byte, fixMsg bool) AddressGenerator {
+func (k Keeper) PredicableAddressGenerator(creator sdk.AccAddress, salt []byte, msg []byte, fixMsg bool) AddressGenerator {
 	return func(ctx sdk.Context, _ uint64, checksum []byte) sdk.AccAddress {
 		if !fixMsg { // clear msg to not be included in the address generation
 			msg = []byte{}
 		}
+		// increment the instanceID counter despite it being unused.
+		// we use this as state verification to ensure we have the same
+		// number of instantiated contracts after exporting and importing genesis.
+		k.autoIncrementID(ctx, types.KeyLastInstanceID)
 		return BuildContractAddressPredictable(checksum, creator, salt, msg)
 	}
 }
