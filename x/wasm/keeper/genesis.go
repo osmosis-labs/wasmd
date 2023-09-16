@@ -35,7 +35,7 @@ func InitGenesis(ctx sdk.Context, keeper *Keeper, data types.GenesisState) ([]ab
 		}
 	}
 
-	// var maxContractID int
+	var maxContractID int
 	for i, contract := range data.Contracts {
 		contractAddr, err := sdk.AccAddressFromBech32(contract.ContractAddress)
 		if err != nil {
@@ -45,7 +45,7 @@ func InitGenesis(ctx sdk.Context, keeper *Keeper, data types.GenesisState) ([]ab
 		if err != nil {
 			return nil, sdkerrors.Wrapf(err, "contract number %d", i)
 		}
-		// maxContractID = i + 1 // not ideal but max(contractID) is not persisted otherwise
+		maxContractID = i + 1 // not ideal but max(contractID) is not persisted otherwise
 	}
 
 	for i, seq := range data.Sequences {
@@ -60,12 +60,10 @@ func InitGenesis(ctx sdk.Context, keeper *Keeper, data types.GenesisState) ([]ab
 	if seqVal <= maxCodeID {
 		return nil, sdkerrors.Wrapf(types.ErrInvalid, "seq %s with value: %d must be greater than: %d ", string(types.KeyLastCodeID), seqVal, maxCodeID)
 	}
-	// TODO START: Once a chain corrects the last instance ID, they can uncomment this
-	// seqVal = keeper.PeekAutoIncrementID(ctx, types.KeyLastInstanceID)
-	// if seqVal <= uint64(maxContractID) {
-	// 	return nil, sdkerrors.Wrapf(types.ErrInvalid, "seq %s with value: %d must be greater than: %d ", string(types.KeyLastInstanceID), seqVal, maxContractID)
-	// }
-	// TODO END: Once a chain corrects the last instance ID, they can uncomment this
+	seqVal = keeper.PeekAutoIncrementID(ctx, types.KeyLastInstanceID)
+	if seqVal <= uint64(maxContractID) {
+		return nil, sdkerrors.Wrapf(types.ErrInvalid, "seq %s with value: %d must be greater than: %d ", string(types.KeyLastInstanceID), seqVal, maxContractID)
+	}
 	return nil, nil
 }
 
