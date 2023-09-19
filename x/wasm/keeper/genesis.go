@@ -123,7 +123,8 @@ func ExportGenesis(ctx sdk.Context, keeper *Keeper) *types.GenesisState {
 	})
 	genState.Sequences = append(genState.Sequences, types.Sequence{
 		IDKey: types.KeyLastInstanceID,
-		Value: totalNumContracts,
+		// We subtract by 1 here, because there is such thing as contract number 0 (why?!)
+		Value: totalNumContracts - 1,
 	})
 	// TODO END: Once a chain correct the last instance ID, the can remove this
 
