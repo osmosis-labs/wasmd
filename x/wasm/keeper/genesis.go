@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"fmt"
 	"runtime"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -78,6 +79,7 @@ func ExportGenesis(ctx sdk.Context, keeper *Keeper) *types.GenesisState {
 	genState.Params = keeper.GetParams(ctx)
 
 	codes := make([]types.Code, 0)
+	fmt.Println("iterating code infos")
 	keeper.IterateCodeInfos(ctx, func(codeID uint64, info types.CodeInfo) bool {
 		bytecode, err := keeper.GetByteCode(ctx, codeID)
 		if err != nil {
@@ -89,18 +91,21 @@ func ExportGenesis(ctx sdk.Context, keeper *Keeper) *types.GenesisState {
 			CodeBytes: bytecode,
 			Pinned:    keeper.IsPinnedCode(ctx, codeID),
 		})
-		if len(codes) >= 50 {
+		if len(codes) >= 25 {
 			genState.Codes = append(genState.Codes, codes...)
 			codes = make([]types.Code, 0)
+			fmt.Println("iterating code infos gc")
 			runtime.GC()
 		}
 		return false
 	})
 	genState.Codes = append(genState.Codes, codes...)
 	codes = nil
+	fmt.Println("iterating code infos fin gc")
 	runtime.GC()
 
 	contracts := make([]types.Contract, 0)
+	fmt.Println("iterating contract infos")
 	keeper.IterateContractInfo(ctx, func(addr sdk.AccAddress, contract types.ContractInfo) bool {
 		var state []types.Model
 		keeper.IterateContractState(ctx, addr, func(key, value []byte) bool {
@@ -117,15 +122,17 @@ func ExportGenesis(ctx sdk.Context, keeper *Keeper) *types.GenesisState {
 			ContractCodeHistory: contractCodeHistory,
 		})
 
-		if len(contracts) >= 50 {
+		if len(contracts) >= 25 {
 			genState.Contracts = append(genState.Contracts, contracts...)
 			contracts = make([]types.Contract, 0)
+			fmt.Println("iterating contract infos gc")
 			runtime.GC()
 		}
 		return false
 	})
 	genState.Contracts = append(genState.Contracts, contracts...)
 	contracts = nil
+	fmt.Println("iterating contract infos fin gc")
 	runtime.GC()
 
 	for _, k := range [][]byte{types.KeyLastCodeID, types.KeyLastInstanceID} {
