@@ -72,9 +72,8 @@ func InitGenesis(ctx sdk.Context, keeper *Keeper, data types.GenesisState) ([]ab
 	return nil, nil
 }
 
-// ExportGenesis writes the GenesisState for a given context and keeper to a file.
 func ExportGenesis(ctx sdk.Context, keeper *Keeper) error {
-	file, err := os.Create("newwasm")
+	file, err := os.Create("newwasm1")
 	if err != nil {
 		return err
 	}
@@ -84,18 +83,22 @@ func ExportGenesis(ctx sdk.Context, keeper *Keeper) error {
 	defer jsoniter.ConfigDefault.ReturnStream(stream)
 
 	stream.WriteObjectStart()
+
+	// params
 	stream.WriteObjectField("params")
 	stream.WriteVal(keeper.GetParams(ctx))
 
+	// codes
 	stream.WriteMore()
 	stream.WriteObjectField("codes")
-	stream.WriteRaw(`[`)
+	stream.WriteArrayStart()
 	firstCode := true
 	keeper.IterateCodeInfos(ctx, func(codeID uint64, info types.CodeInfo) bool {
 		if !firstCode {
-			stream.WriteRaw(`,`)
+			stream.WriteMore()
 		}
 		firstCode = false
+
 		bytecode, err := keeper.GetByteCode(ctx, codeID)
 		if err != nil {
 			panic(err)
@@ -108,17 +111,19 @@ func ExportGenesis(ctx sdk.Context, keeper *Keeper) error {
 		})
 		return false
 	})
-	stream.WriteRaw(`]`)
+	stream.WriteArrayEnd()
 
+	// contracts
 	stream.WriteMore()
 	stream.WriteObjectField("contracts")
-	stream.WriteRaw(`[`)
+	stream.WriteArrayStart()
 	firstContract := true
 	keeper.IterateContractInfo(ctx, func(addr sdk.AccAddress, contract types.ContractInfo) bool {
 		if !firstContract {
-			stream.WriteRaw(`,`)
+			stream.WriteMore()
 		}
 		firstContract = false
+
 		var state []types.Model
 		keeper.IterateContractState(ctx, addr, func(key, value []byte) bool {
 			state = append(state, types.Model{Key: key, Value: value})
@@ -126,7 +131,6 @@ func ExportGenesis(ctx sdk.Context, keeper *Keeper) error {
 		})
 
 		contractCodeHistory := keeper.GetContractHistory(ctx, addr)
-
 		stream.WriteVal(types.Contract{
 			ContractAddress:     addr.String(),
 			ContractInfo:        contract,
@@ -135,15 +139,16 @@ func ExportGenesis(ctx sdk.Context, keeper *Keeper) error {
 		})
 		return false
 	})
-	stream.WriteRaw(`]`)
+	stream.WriteArrayEnd()
 
+	// sequences
 	stream.WriteMore()
 	stream.WriteObjectField("sequences")
-	stream.WriteRaw(`[`)
+	stream.WriteArrayStart()
 	firstSequence := true
 	for _, k := range [][]byte{types.KeyLastCodeID, types.KeyLastInstanceID} {
 		if !firstSequence {
-			stream.WriteRaw(`,`)
+			stream.WriteMore()
 		}
 		firstSequence = false
 		stream.WriteVal(types.Sequence{
@@ -151,7 +156,7 @@ func ExportGenesis(ctx sdk.Context, keeper *Keeper) error {
 			Value: keeper.PeekAutoIncrementID(ctx, k),
 		})
 	}
-	stream.WriteRaw(`]`)
+	stream.WriteArrayEnd()
 
 	stream.WriteObjectEnd()
 	stream.Flush()
