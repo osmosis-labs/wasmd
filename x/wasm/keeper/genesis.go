@@ -1,6 +1,8 @@
 package keeper
 
 import (
+	"runtime"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -75,20 +77,30 @@ func ExportGenesis(ctx sdk.Context, keeper *Keeper) *types.GenesisState {
 
 	genState.Params = keeper.GetParams(ctx)
 
+	codes := make([]types.Code, 0)
 	keeper.IterateCodeInfos(ctx, func(codeID uint64, info types.CodeInfo) bool {
 		bytecode, err := keeper.GetByteCode(ctx, codeID)
 		if err != nil {
 			panic(err)
 		}
-		genState.Codes = append(genState.Codes, types.Code{
+		codes = append(codes, types.Code{
 			CodeID:    codeID,
 			CodeInfo:  info,
 			CodeBytes: bytecode,
 			Pinned:    keeper.IsPinnedCode(ctx, codeID),
 		})
+		if len(codes) >= 50 {
+			genState.Codes = append(genState.Codes, codes...)
+			codes = make([]types.Code, 0)
+			runtime.GC()
+		}
 		return false
 	})
+	genState.Codes = append(genState.Codes, codes...)
+	codes = nil
+	runtime.GC()
 
+	contracts := make([]types.Contract, 0)
 	keeper.IterateContractInfo(ctx, func(addr sdk.AccAddress, contract types.ContractInfo) bool {
 		var state []types.Model
 		keeper.IterateContractState(ctx, addr, func(key, value []byte) bool {
@@ -98,14 +110,23 @@ func ExportGenesis(ctx sdk.Context, keeper *Keeper) *types.GenesisState {
 
 		contractCodeHistory := keeper.GetContractHistory(ctx, addr)
 
-		genState.Contracts = append(genState.Contracts, types.Contract{
+		contracts = append(contracts, types.Contract{
 			ContractAddress:     addr.String(),
 			ContractInfo:        contract,
 			ContractState:       state,
 			ContractCodeHistory: contractCodeHistory,
 		})
+
+		if len(contracts) >= 50 {
+			genState.Contracts = append(genState.Contracts, contracts...)
+			contracts = make([]types.Contract, 0)
+			runtime.GC()
+		}
 		return false
 	})
+	genState.Contracts = append(genState.Contracts, contracts...)
+	contracts = nil
+	runtime.GC()
 
 	for _, k := range [][]byte{types.KeyLastCodeID, types.KeyLastInstanceID} {
 		genState.Sequences = append(genState.Sequences, types.Sequence{
