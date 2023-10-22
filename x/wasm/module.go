@@ -181,14 +181,14 @@ func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.
 // module.
 func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.RawMessage {
 	// Create a temporary file
-	tmpfile, err := ioutil.TempFile("", "wasm")
+	tmpfile, err := ioutil.TempFile("", "newwasm2")
 	if err != nil {
 		panic(err)
 	}
 	defer os.Remove(tmpfile.Name()) // clean up
 
 	// Export the genesis state to the temporary file
-	if err := ExportGenesis(ctx, am.keeper); err != nil {
+	if err := ExportGenesis(ctx, am.keeper, tmpfile.Name()); err != nil {
 		panic(err)
 	}
 
