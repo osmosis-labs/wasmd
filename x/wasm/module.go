@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
+	"os"
 	"runtime/debug"
 	"strings"
 
@@ -178,8 +180,25 @@ func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.
 // ExportGenesis returns the exported genesis state as raw bytes for the wasm
 // module.
 func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.RawMessage {
-	gs := ExportGenesis(ctx, am.keeper)
-	return cdc.MustMarshalJSON(gs)
+	// Create a temporary file
+	tmpfile, err := ioutil.TempFile("", "wasm")
+	if err != nil {
+		panic(err)
+	}
+	defer os.Remove(tmpfile.Name()) // clean up
+
+	// Export the genesis state to the temporary file
+	if err := ExportGenesis(ctx, am.keeper); err != nil {
+		panic(err)
+	}
+
+	// Read the file back into a json.RawMessage
+	data, err := ioutil.ReadFile(tmpfile.Name())
+	if err != nil {
+		panic(err)
+	}
+
+	return json.RawMessage(data)
 }
 
 // BeginBlock returns the begin blocker for the wasm module.

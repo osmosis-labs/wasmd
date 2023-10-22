@@ -1,11 +1,11 @@
 package keeper
 
 import (
-	"fmt"
-	"runtime"
+	"os"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	jsoniter "github.com/json-iterator/go"
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/CosmWasm/wasmd/x/wasm/types"
@@ -73,39 +73,42 @@ func InitGenesis(ctx sdk.Context, keeper *Keeper, data types.GenesisState) ([]ab
 }
 
 // ExportGenesis returns a GenesisState for a given context and keeper.
-func ExportGenesis(ctx sdk.Context, keeper *Keeper) *types.GenesisState {
-	var genState types.GenesisState
+func ExportGenesis(ctx sdk.Context, keeper *Keeper) error {
+	file, err := os.Create("wasm")
+	if err != nil {
+		return err
+	}
+	defer file.Close()
 
-	genState.Params = keeper.GetParams(ctx)
+	stream := jsoniter.ConfigDefault.BorrowStream(file)
+	defer jsoniter.ConfigDefault.ReturnStream(stream)
 
-	codes := make([]types.Code, 0)
-	fmt.Println("iterating code infos")
+	stream.WriteObjectStart()
+	stream.WriteObjectField("params")
+	stream.WriteVal(keeper.GetParams(ctx))
+
+	stream.WriteMore()
+	stream.WriteObjectField("codes")
+	stream.WriteArrayStart()
 	keeper.IterateCodeInfos(ctx, func(codeID uint64, info types.CodeInfo) bool {
 		bytecode, err := keeper.GetByteCode(ctx, codeID)
 		if err != nil {
 			panic(err)
 		}
-		codes = append(codes, types.Code{
+		stream.WriteVal(types.Code{
 			CodeID:    codeID,
 			CodeInfo:  info,
 			CodeBytes: bytecode,
 			Pinned:    keeper.IsPinnedCode(ctx, codeID),
 		})
-		if len(codes) >= 25 {
-			genState.Codes = append(genState.Codes, codes...)
-			codes = make([]types.Code, 0)
-			fmt.Println("iterating code infos gc")
-			runtime.GC()
-		}
+		stream.WriteMore()
 		return false
 	})
-	genState.Codes = append(genState.Codes, codes...)
-	codes = nil
-	fmt.Println("iterating code infos fin gc")
-	runtime.GC()
+	stream.WriteArrayEnd()
 
-	contracts := make([]types.Contract, 0)
-	fmt.Println("iterating contract infos")
+	stream.WriteMore()
+	stream.WriteObjectField("contracts")
+	stream.WriteArrayStart()
 	keeper.IterateContractInfo(ctx, func(addr sdk.AccAddress, contract types.ContractInfo) bool {
 		var state []types.Model
 		keeper.IterateContractState(ctx, addr, func(key, value []byte) bool {
@@ -115,32 +118,31 @@ func ExportGenesis(ctx sdk.Context, keeper *Keeper) *types.GenesisState {
 
 		contractCodeHistory := keeper.GetContractHistory(ctx, addr)
 
-		contracts = append(contracts, types.Contract{
+		stream.WriteVal(types.Contract{
 			ContractAddress:     addr.String(),
 			ContractInfo:        contract,
 			ContractState:       state,
 			ContractCodeHistory: contractCodeHistory,
 		})
-
-		if len(contracts) >= 25 {
-			genState.Contracts = append(genState.Contracts, contracts...)
-			contracts = make([]types.Contract, 0)
-			fmt.Println("iterating contract infos gc")
-			runtime.GC()
-		}
+		stream.WriteMore()
 		return false
 	})
-	genState.Contracts = append(genState.Contracts, contracts...)
-	contracts = nil
-	fmt.Println("iterating contract infos fin gc")
-	runtime.GC()
+	stream.WriteArrayEnd()
 
+	stream.WriteMore()
+	stream.WriteObjectField("sequences")
+	stream.WriteArrayStart()
 	for _, k := range [][]byte{types.KeyLastCodeID, types.KeyLastInstanceID} {
-		genState.Sequences = append(genState.Sequences, types.Sequence{
+		stream.WriteVal(types.Sequence{
 			IDKey: k,
 			Value: keeper.PeekAutoIncrementID(ctx, k),
 		})
+		stream.WriteMore()
 	}
+	stream.WriteArrayEnd()
 
-	return &genState
+	stream.WriteObjectEnd()
+	stream.Flush()
+
+	return stream.Error
 }
