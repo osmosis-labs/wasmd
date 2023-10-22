@@ -92,70 +92,70 @@ func ExportGenesis(ctx sdk.Context, keeper *Keeper) error {
 	stream.WriteMore()
 	stream.WriteObjectField("codes")
 	stream.WriteArrayStart()
-	firstCode := true
-	keeper.IterateCodeInfos(ctx, func(codeID uint64, info types.CodeInfo) bool {
-		if !firstCode {
-			stream.WriteMore()
-		}
-		firstCode = false
+	// firstCode := true
+	// keeper.IterateCodeInfos(ctx, func(codeID uint64, info types.CodeInfo) bool {
+	// 	if !firstCode {
+	// 		stream.WriteMore()
+	// 	}
+	// 	firstCode = false
 
-		bytecode, err := keeper.GetByteCode(ctx, codeID)
-		if err != nil {
-			panic(err)
-		}
-		stream.WriteVal(types.Code{
-			CodeID:    codeID,
-			CodeInfo:  info,
-			CodeBytes: bytecode,
-			Pinned:    keeper.IsPinnedCode(ctx, codeID),
-		})
-		return false
-	})
+	// 	bytecode, err := keeper.GetByteCode(ctx, codeID)
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	// 	stream.WriteVal(types.Code{
+	// 		CodeID:    codeID,
+	// 		CodeInfo:  info,
+	// 		CodeBytes: bytecode,
+	// 		Pinned:    keeper.IsPinnedCode(ctx, codeID),
+	// 	})
+	// 	return false
+	// })
 	stream.WriteArrayEnd()
 
 	// contracts
 	stream.WriteMore()
 	stream.WriteObjectField("contracts")
 	stream.WriteArrayStart()
-	firstContract := true
-	keeper.IterateContractInfo(ctx, func(addr sdk.AccAddress, contract types.ContractInfo) bool {
-		if !firstContract {
-			stream.WriteMore()
-		}
-		firstContract = false
+	// firstContract := true
+	// keeper.IterateContractInfo(ctx, func(addr sdk.AccAddress, contract types.ContractInfo) bool {
+	// 	if !firstContract {
+	// 		stream.WriteMore()
+	// 	}
+	// 	firstContract = false
 
-		var state []types.Model
-		keeper.IterateContractState(ctx, addr, func(key, value []byte) bool {
-			state = append(state, types.Model{Key: key, Value: value})
-			return false
-		})
+	// 	var state []types.Model
+	// 	keeper.IterateContractState(ctx, addr, func(key, value []byte) bool {
+	// 		state = append(state, types.Model{Key: key, Value: value})
+	// 		return false
+	// 	})
 
-		contractCodeHistory := keeper.GetContractHistory(ctx, addr)
-		stream.WriteVal(types.Contract{
-			ContractAddress:     addr.String(),
-			ContractInfo:        contract,
-			ContractState:       state,
-			ContractCodeHistory: contractCodeHistory,
-		})
-		return false
-	})
+	// 	contractCodeHistory := keeper.GetContractHistory(ctx, addr)
+	// 	stream.WriteVal(types.Contract{
+	// 		ContractAddress:     addr.String(),
+	// 		ContractInfo:        contract,
+	// 		ContractState:       state,
+	// 		ContractCodeHistory: contractCodeHistory,
+	// 	})
+	// 	return false
+	// })
 	stream.WriteArrayEnd()
 
 	// sequences
 	stream.WriteMore()
 	stream.WriteObjectField("sequences")
 	stream.WriteArrayStart()
-	firstSequence := true
-	for _, k := range [][]byte{types.KeyLastCodeID, types.KeyLastInstanceID} {
-		if !firstSequence {
-			stream.WriteMore()
-		}
-		firstSequence = false
-		stream.WriteVal(types.Sequence{
-			IDKey: k,
-			Value: keeper.PeekAutoIncrementID(ctx, k),
-		})
-	}
+	// firstSequence := true
+	// for _, k := range [][]byte{types.KeyLastCodeID, types.KeyLastInstanceID} {
+	// 	if !firstSequence {
+	// 		stream.WriteMore()
+	// 	}
+	// 	firstSequence = false
+	// 	stream.WriteVal(types.Sequence{
+	// 		IDKey: k,
+	// 		Value: keeper.PeekAutoIncrementID(ctx, k),
+	// 	})
+	// }
 	stream.WriteArrayEnd()
 
 	stream.WriteObjectEnd()
