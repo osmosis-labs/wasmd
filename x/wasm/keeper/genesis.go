@@ -72,9 +72,9 @@ func InitGenesis(ctx sdk.Context, keeper *Keeper, data types.GenesisState) ([]ab
 	return nil, nil
 }
 
-// ExportGenesis returns a GenesisState for a given context and keeper.
+// ExportGenesis writes the GenesisState for a given context and keeper to a file.
 func ExportGenesis(ctx sdk.Context, keeper *Keeper) error {
-	file, err := os.Create("wasm")
+	file, err := os.Create("newwasm")
 	if err != nil {
 		return err
 	}
@@ -89,8 +89,13 @@ func ExportGenesis(ctx sdk.Context, keeper *Keeper) error {
 
 	stream.WriteMore()
 	stream.WriteObjectField("codes")
-	stream.WriteArrayStart()
+	stream.WriteRaw(`[`)
+	firstCode := true
 	keeper.IterateCodeInfos(ctx, func(codeID uint64, info types.CodeInfo) bool {
+		if !firstCode {
+			stream.WriteRaw(`,`)
+		}
+		firstCode = false
 		bytecode, err := keeper.GetByteCode(ctx, codeID)
 		if err != nil {
 			panic(err)
@@ -101,15 +106,19 @@ func ExportGenesis(ctx sdk.Context, keeper *Keeper) error {
 			CodeBytes: bytecode,
 			Pinned:    keeper.IsPinnedCode(ctx, codeID),
 		})
-		stream.WriteMore()
 		return false
 	})
-	stream.WriteArrayEnd()
+	stream.WriteRaw(`]`)
 
 	stream.WriteMore()
 	stream.WriteObjectField("contracts")
-	stream.WriteArrayStart()
+	stream.WriteRaw(`[`)
+	firstContract := true
 	keeper.IterateContractInfo(ctx, func(addr sdk.AccAddress, contract types.ContractInfo) bool {
+		if !firstContract {
+			stream.WriteRaw(`,`)
+		}
+		firstContract = false
 		var state []types.Model
 		keeper.IterateContractState(ctx, addr, func(key, value []byte) bool {
 			state = append(state, types.Model{Key: key, Value: value})
@@ -124,22 +133,25 @@ func ExportGenesis(ctx sdk.Context, keeper *Keeper) error {
 			ContractState:       state,
 			ContractCodeHistory: contractCodeHistory,
 		})
-		stream.WriteMore()
 		return false
 	})
-	stream.WriteArrayEnd()
+	stream.WriteRaw(`]`)
 
 	stream.WriteMore()
 	stream.WriteObjectField("sequences")
-	stream.WriteArrayStart()
+	stream.WriteRaw(`[`)
+	firstSequence := true
 	for _, k := range [][]byte{types.KeyLastCodeID, types.KeyLastInstanceID} {
+		if !firstSequence {
+			stream.WriteRaw(`,`)
+		}
+		firstSequence = false
 		stream.WriteVal(types.Sequence{
 			IDKey: k,
 			Value: keeper.PeekAutoIncrementID(ctx, k),
 		})
-		stream.WriteMore()
 	}
-	stream.WriteArrayEnd()
+	stream.WriteRaw(`]`)
 
 	stream.WriteObjectEnd()
 	stream.Flush()
