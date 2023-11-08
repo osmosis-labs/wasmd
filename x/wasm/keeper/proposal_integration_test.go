@@ -112,6 +112,7 @@ func submitLegacyProposal(t *testing.T, ctx sdk.Context, content v1beta1.Content
 		"",
 		"my title",
 		"my description",
+		false,
 	)
 	require.NoError(t, err)
 

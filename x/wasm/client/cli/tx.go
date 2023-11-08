@@ -45,6 +45,7 @@ const (
 	flagAllowAllMsgs              = "allow-all-messages"
 	flagNoTokenTransfer           = "no-token-transfer" //nolint:gosec
 	flagAuthority                 = "authority"
+	flagExpedite                  = "expedite"
 )
 
 // GetTxCmd returns the transaction commands for this module
