@@ -17,6 +17,7 @@ const (
 	EventTypeGovContractResult      = "gov_contract_result"
 	EventTypeUpdateContractAdmin    = "update_contract_admin"
 	EventTypeUpdateCodeAccessConfig = "update_code_access_config"
+	EventTypeRedactedError          = "sumbsg_error"
 )
 
 // event attributes returned from contract execution
@@ -31,4 +32,7 @@ const (
 	AttributeKeyNewAdmin            = "new_admin_address"
 	AttributeKeyCodePermission      = "code_permission"
 	AttributeKeyAuthorizedAddresses = "authorized_addresses"
+	AttributeKeySubMsgError         = "error"
+	AttributeKeyMsgtype             = "msg_type"
+	AttributeKeyStargateTypeUrl     = "stargate_type_url"
 )
