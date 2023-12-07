@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	defaultMemoryCacheSize    uint32 = 100 // in MiB
+	defaultMemoryCacheSize    uint32 = 1000 // in MiB
 	defaultSmartQueryGasLimit uint64 = 3_000_000
 	defaultContractDebugMode         = false
 
