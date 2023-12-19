@@ -27,6 +27,9 @@ func (a CountTXDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, 
 	if simulate {
 		return next(ctx, tx, simulate)
 	}
+
+	ctx.Logger().With("sim", "info").Info("CountTXDecorator non-simulated START")
+
 	store := ctx.KVStore(a.storeKey)
 	currentHeight := ctx.BlockHeight()
 
@@ -41,6 +44,8 @@ func (a CountTXDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, 
 	}
 	// store next counter value for current height
 	store.Set(types.TXCounterPrefix, encodeHeightCounter(currentHeight, txCounter+1))
+
+	ctx.Logger().With("sim", "info").Info("CountTXDecorator non-simulated END")
 
 	return next(types.WithTXCounter(ctx, txCounter), tx, simulate)
 }
