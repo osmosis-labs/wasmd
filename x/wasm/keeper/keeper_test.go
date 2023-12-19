@@ -14,6 +14,7 @@ import (
 	wasmvm "github.com/CosmWasm/wasmvm"
 	wasmvmtypes "github.com/CosmWasm/wasmvm/types"
 	abci "github.com/cometbft/cometbft/abci/types"
+	"github.com/cometbft/cometbft/libs/log"
 	"github.com/cometbft/cometbft/libs/rand"
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	fuzz "github.com/google/gofuzz"
@@ -306,7 +307,7 @@ func TestCreateWithSimulation(t *testing.T) {
 	ctx, keepers := CreateTestInput(t, false, AvailableCapabilities)
 
 	ctx = ctx.WithBlockHeader(tmproto.Header{Height: 1}).
-		WithGasMeter(stypes.NewInfiniteGasMeter())
+		WithGasMeter(stypes.NewInfiniteGasMeter(log.NewNopLogger()))
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	creator := keepers.Faucet.NewFundedRandomAccount(ctx, deposit...)
@@ -318,7 +319,7 @@ func TestCreateWithSimulation(t *testing.T) {
 
 	// then try to create it in non-simulation mode (should not fail)
 	ctx, keepers = CreateTestInput(t, false, AvailableCapabilities)
-	ctx = ctx.WithGasMeter(sdk.NewGasMeter(10_000_000))
+	ctx = ctx.WithGasMeter(sdk.NewGasMeter(10_000_000, log.NewNopLogger()))
 	creator = keepers.Faucet.NewFundedRandomAccount(ctx, deposit...)
 	contractID, _, err = keepers.ContractKeeper.Create(ctx, creator, hackatomWasm, nil)
 
@@ -337,15 +338,15 @@ func TestIsSimulationMode(t *testing.T) {
 		exp bool
 	}{
 		"genesis block": {
-			ctx: sdk.Context{}.WithBlockHeader(tmproto.Header{}).WithGasMeter(stypes.NewInfiniteGasMeter()),
+			ctx: sdk.Context{}.WithBlockHeader(tmproto.Header{}).WithGasMeter(stypes.NewInfiniteGasMeter(log.NewNopLogger())),
 			exp: false,
 		},
 		"any regular block": {
-			ctx: sdk.Context{}.WithBlockHeader(tmproto.Header{Height: 1}).WithGasMeter(stypes.NewGasMeter(10000000)),
+			ctx: sdk.Context{}.WithBlockHeader(tmproto.Header{Height: 1}).WithGasMeter(stypes.NewGasMeter(10000000, log.NewNopLogger())),
 			exp: false,
 		},
 		"simulation": {
-			ctx: sdk.Context{}.WithBlockHeader(tmproto.Header{Height: 1}).WithGasMeter(stypes.NewInfiniteGasMeter()),
+			ctx: sdk.Context{}.WithBlockHeader(tmproto.Header{Height: 1}).WithGasMeter(stypes.NewInfiniteGasMeter(log.NewNopLogger())),
 			exp: true,
 		},
 	}
@@ -385,7 +386,7 @@ func TestCreateWithBrokenGzippedPayload(t *testing.T) {
 	wasmCode, err := os.ReadFile("./testdata/broken_crc.gzip")
 	require.NoError(t, err, "reading gzipped WASM code")
 
-	gm := sdk.NewInfiniteGasMeter()
+	gm := sdk.NewInfiniteGasMeter(log.NewNopLogger())
 	codeID, checksum, err := keeper.Create(ctx.WithGasMeter(gm), creator, wasmCode, nil)
 	require.Error(t, err)
 	assert.Empty(t, codeID)
@@ -1047,7 +1048,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 
 	// make sure we set a limit before calling
 	var gasLimit uint64 = 400_000
-	ctx = ctx.WithGasMeter(sdk.NewGasMeter(gasLimit))
+	ctx = ctx.WithGasMeter(sdk.NewGasMeter(gasLimit, log.NewNopLogger()))
 	require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
 
 	// ensure we get an out of gas panic
@@ -1090,7 +1091,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 
 	// make sure we set a limit before calling
 	var gasLimit uint64 = 400_002
-	ctx = ctx.WithGasMeter(sdk.NewGasMeter(gasLimit))
+	ctx = ctx.WithGasMeter(sdk.NewGasMeter(gasLimit, log.NewNopLogger()))
 	require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
 
 	// ensure we get an out of gas panic
@@ -1857,7 +1858,7 @@ func TestPinnedContractLoops(t *testing.T) {
 			},
 		}, 0, nil
 	}
-	ctx = ctx.WithGasMeter(sdk.NewGasMeter(20000))
+	ctx = ctx.WithGasMeter(sdk.NewGasMeter(20000, log.NewNopLogger()))
 	require.PanicsWithValue(t, sdk.ErrorOutOfGas{Descriptor: "ReadFlat"}, func() {
 		_, err := k.execute(ctx, example.Contract, RandomAccountAddress(t), anyMsg, nil)
 		require.NoError(t, err)
@@ -2261,7 +2262,7 @@ func TestCoinBurnerPruneBalances(t *testing.T) {
 			keepers.AccountKeeper.SetAccount(ctx, keepers.AccountKeeper.NewAccountWithAddress(ctx, vestingAddr))
 
 			// when
-			noGasCtx := ctx.WithGasMeter(sdk.NewGasMeter(0)) // should not use callers gas
+			noGasCtx := ctx.WithGasMeter(sdk.NewGasMeter(0, log.NewNopLogger())) // should not use callers gas
 			gotHandled, gotErr := NewVestingCoinBurner(keepers.BankKeeper).CleanupExistingAccount(noGasCtx, existingAccount)
 			// then
 			if spec.expErr != nil {
@@ -2442,19 +2443,19 @@ func TestGasConsumed(t *testing.T) {
 		expMultipliedGasConsumed uint64
 	}{
 		"all good": {
-			originalMeter:            sdk.NewGasMeter(100),
+			originalMeter:            sdk.NewGasMeter(100, log.NewNopLogger()),
 			gasRegister:              types.NewWasmGasRegister(types.DefaultGasRegisterConfig()),
 			consumeGas:               sdk.Gas(1),
 			expMultipliedGasConsumed: 140000000,
 		},
 		"consumeGas = limit": {
-			originalMeter:            sdk.NewGasMeter(1),
+			originalMeter:            sdk.NewGasMeter(1, log.NewNopLogger()),
 			gasRegister:              types.NewWasmGasRegister(types.DefaultGasRegisterConfig()),
 			consumeGas:               sdk.Gas(1),
 			expMultipliedGasConsumed: 140000000,
 		},
 		"consumeGas > limit": {
-			originalMeter: sdk.NewGasMeter(10),
+			originalMeter: sdk.NewGasMeter(10, log.NewNopLogger()),
 			gasRegister:   types.NewWasmGasRegister(types.DefaultGasRegisterConfig()),
 			consumeGas:    sdk.Gas(11),
 			expPanic:      true,
@@ -2465,7 +2466,7 @@ func TestGasConsumed(t *testing.T) {
 			expPanic:    true,
 		},
 		"nil gas register": {
-			originalMeter: sdk.NewGasMeter(100),
+			originalMeter: sdk.NewGasMeter(100, log.NewNopLogger()),
 			consumeGas:    sdk.Gas(1),
 			expPanic:      true,
 		},

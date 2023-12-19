@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	wasmvm "github.com/CosmWasm/wasmvm"
+	"github.com/cometbft/cometbft/libs/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -177,7 +178,7 @@ func TestContractAuthzFilterAccept(t *testing.T) {
 	}
 	for name, spec := range specs {
 		t.Run(name, func(t *testing.T) {
-			gm := sdk.NewGasMeter(1_000_000)
+			gm := sdk.NewGasMeter(1_000_000, log.NewNopLogger())
 			allowed, gotErr := spec.filter.Accept(sdk.Context{}.WithGasMeter(gm), spec.src)
 
 			// then
@@ -711,7 +712,7 @@ func TestAcceptGrantedMessage(t *testing.T) {
 	}
 	for name, spec := range specs {
 		t.Run(name, func(t *testing.T) {
-			ctx := sdk.Context{}.WithGasMeter(sdk.NewInfiniteGasMeter())
+			ctx := sdk.Context{}.WithGasMeter(sdk.NewInfiniteGasMeter(log.NewNopLogger()))
 			gotResult, gotErr := spec.auth.Accept(ctx, spec.msg)
 			if spec.expErr != nil {
 				require.ErrorIs(t, gotErr, spec.expErr)
@@ -959,7 +960,7 @@ func TestStoreCodeAuthorizationAccept(t *testing.T) {
 	}
 	for name, spec := range specs {
 		t.Run(name, func(t *testing.T) {
-			ctx := sdk.Context{}.WithGasMeter(sdk.NewInfiniteGasMeter())
+			ctx := sdk.Context{}.WithGasMeter(sdk.NewInfiniteGasMeter(log.NewNopLogger()))
 			gotResult, gotErr := spec.auth.Accept(ctx, spec.msg)
 			if spec.expErr != nil {
 				require.ErrorIs(t, gotErr, spec.expErr)

@@ -86,12 +86,12 @@ func (d LimitSimulationGasDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simu
 
 	// apply custom node gas limit
 	if d.gasLimit != nil {
-		return next(ctx.WithGasMeter(sdk.NewGasMeter(*d.gasLimit)), tx, simulate)
+		return next(ctx.WithGasMeter(sdk.NewGasMeter(*d.gasLimit, ctx.Logger())), tx, simulate)
 	}
 
 	// default to max block gas when set, to be on the safe side
 	if maxGas := ctx.ConsensusParams().GetBlock().MaxGas; maxGas > 0 {
-		return next(ctx.WithGasMeter(sdk.NewGasMeter(sdk.Gas(maxGas))), tx, simulate)
+		return next(ctx.WithGasMeter(sdk.NewGasMeter(sdk.Gas(maxGas), ctx.Logger())), tx, simulate)
 	}
 	return next(ctx, tx, simulate)
 }

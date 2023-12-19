@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	wasmvmtypes "github.com/CosmWasm/wasmvm/types"
+	"github.com/cometbft/cometbft/libs/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -112,7 +113,7 @@ func TestGasCostOnQuery(t *testing.T) {
 			keeper.queryGasLimit = 1000
 
 			// make sure we set a limit before calling
-			ctx = ctx.WithGasMeter(sdk.NewGasMeter(tc.gasLimit))
+			ctx = ctx.WithGasMeter(sdk.NewGasMeter(tc.gasLimit, log.NewNopLogger()))
 			require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
 
 			// do the query
@@ -274,7 +275,7 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 			totalWasmQueryCounter = 0
 
 			// make sure we set a limit before calling
-			ctx = ctx.WithGasMeter(sdk.NewGasMeter(tc.gasLimit))
+			ctx = ctx.WithGasMeter(sdk.NewGasMeter(tc.gasLimit, log.NewNopLogger()))
 			require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
 
 			// prepare the query

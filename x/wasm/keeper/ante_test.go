@@ -163,7 +163,7 @@ func TestLimitSimulationGasDecorator(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			nextAnte := consumeGasAnteHandler(spec.consumeGas)
 			ctx := sdk.Context{}.
-				WithGasMeter(sdk.NewInfiniteGasMeter()).
+				WithGasMeter(sdk.NewInfiniteGasMeter(log.NewNopLogger())).
 				WithConsensusParams(&tmproto.ConsensusParams{
 					Block: &tmproto.BlockParams{MaxGas: spec.maxBlockGas},
 				})

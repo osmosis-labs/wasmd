@@ -9,6 +9,7 @@ import (
 
 	wasmvm "github.com/CosmWasm/wasmvm"
 	wasmvmtypes "github.com/CosmWasm/wasmvm/types"
+	"github.com/cometbft/cometbft/libs/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -112,8 +113,8 @@ func TestDispatchSubMsgErrorHandling(t *testing.T) {
 
 	// prep - create one chain and upload the code
 	ctx, keepers := CreateTestInput(t, false, ReflectFeatures)
-	ctx = ctx.WithGasMeter(sdk.NewInfiniteGasMeter())
-	ctx = ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	ctx = ctx.WithGasMeter(sdk.NewInfiniteGasMeter(log.NewNopLogger()))
+	ctx = ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter(log.NewNopLogger()))
 	keeper := keepers.WasmKeeper
 	contractStart := sdk.NewCoins(sdk.NewInt64Coin(fundedDenom, int64(fundedAmount)))
 	uploader := keepers.Faucet.NewFundedRandomAccount(ctx, contractStart.Add(contractStart...)...)
@@ -312,7 +313,7 @@ func TestDispatchSubMsgErrorHandling(t *testing.T) {
 			reflectSendBz, err := json.Marshal(reflectSend)
 			require.NoError(t, err)
 
-			execCtx := ctx.WithGasMeter(sdk.NewGasMeter(ctxGasLimit))
+			execCtx := ctx.WithGasMeter(sdk.NewGasMeter(ctxGasLimit, log.NewNopLogger()))
 			defer func() {
 				if tc.isOutOfGasPanic {
 					r := recover()

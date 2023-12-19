@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cometbft/cometbft/libs/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -18,7 +19,7 @@ import (
 
 func TestInstantiate2(t *testing.T) {
 	parentCtx, keepers := CreateTestInput(t, false, AvailableCapabilities)
-	parentCtx = parentCtx.WithGasMeter(sdk.NewInfiniteGasMeter())
+	parentCtx = parentCtx.WithGasMeter(sdk.NewInfiniteGasMeter(log.NewNopLogger()))
 
 	example := StoreHackatomExampleContract(t, parentCtx, keepers)
 	otherExample := StoreReflectContract(t, parentCtx, keepers)

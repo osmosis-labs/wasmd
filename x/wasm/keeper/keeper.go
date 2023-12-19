@@ -1210,7 +1210,7 @@ func (b VestingCoinBurner) CleanupExistingAccount(ctx sdk.Context, existingAcc a
 		return false, nil
 	}
 
-	ctx = ctx.WithGasMeter(sdk.NewInfiniteGasMeter())
+	ctx = ctx.WithGasMeter(sdk.NewInfiniteGasMeter(ctx.Logger()))
 	coinsToBurn := sdk.NewCoins()
 	for _, orig := range v.GetOriginalVesting() { // focus on the coin denoms that were setup originally; getAllBalances has some issues
 		coinsToBurn = append(coinsToBurn, b.bank.GetBalance(ctx, existingAcc.GetAddress(), orig.Denom))

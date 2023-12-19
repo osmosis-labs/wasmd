@@ -7,6 +7,7 @@ import (
 
 	wasmvmtypes "github.com/CosmWasm/wasmvm/types"
 	abci "github.com/cometbft/cometbft/abci/types"
+	"github.com/cometbft/cometbft/libs/log"
 	channeltypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
 
 	errorsmod "cosmossdk.io/errors"
@@ -51,7 +52,7 @@ func (q QueryHandler) Query(request wasmvmtypes.QueryRequest, gasLimit uint64) (
 	// set a limit for a subCtx
 	sdkGas := q.gasRegister.FromWasmVMGas(gasLimit)
 	// discard all changes/ events in subCtx by not committing the cached context
-	subCtx, _ := q.Ctx.WithGasMeter(sdk.NewGasMeter(sdkGas)).CacheContext()
+	subCtx, _ := q.Ctx.WithGasMeter(sdk.NewGasMeter(sdkGas, log.NewNopLogger())).CacheContext()
 
 	// make sure we charge the higher level context even on panic
 	defer func() {

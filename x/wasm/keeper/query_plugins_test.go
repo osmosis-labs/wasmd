@@ -561,7 +561,7 @@ func TestQueryErrors(t *testing.T) {
 			mock := keeper.WasmVMQueryHandlerFn(func(ctx sdk.Context, caller sdk.AccAddress, request wasmvmtypes.QueryRequest) ([]byte, error) {
 				return nil, spec.src
 			})
-			ctx := sdk.Context{}.WithGasMeter(sdk.NewInfiniteGasMeter()).WithMultiStore(store.NewCommitMultiStore(dbm.NewMemDB())).WithLogger(log.TestingLogger())
+			ctx := sdk.Context{}.WithGasMeter(sdk.NewInfiniteGasMeter(log.NewNopLogger())).WithMultiStore(store.NewCommitMultiStore(dbm.NewMemDB())).WithLogger(log.TestingLogger())
 			q := keeper.NewQueryHandler(ctx, mock, sdk.AccAddress{}, types.NewDefaultWasmGasRegister())
 			_, gotErr := q.Query(wasmvmtypes.QueryRequest{}, 1)
 			assert.Equal(t, spec.expErr, gotErr)
