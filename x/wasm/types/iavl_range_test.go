@@ -3,7 +3,7 @@ package types
 import (
 	"testing"
 
-	dbm "github.com/cometbft/cometbft-db"
+	dbm "github.com/cosmos/cosmos-db"
 	iavl2 "github.com/cosmos/iavl"
 	"github.com/stretchr/testify/require"
 
