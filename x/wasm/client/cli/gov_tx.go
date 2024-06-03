@@ -28,7 +28,7 @@ import (
 
 func ProposalStoreCodeCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "wasm-store [wasm file] --title [text] --description [text] --run-as [address] --unpin-code [unpin_code] --source [source] --builder [builder] --code-hash [code_hash]",
+		Use:   "wasm-store [wasm file] --title [text] --description [text] --run-as [address] --unpin-code [unpin_code] --code-source-url [source] --builder [builder] --code-hash [code_hash]",
 		Short: "Submit a wasm binary proposal",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -114,7 +114,7 @@ func parseVerificationFlags(gzippedWasm []byte, flags *flag.FlagSet) (string, st
 	// if any set require others to be set
 	if len(source) != 0 || len(builder) != 0 || len(codeHash) != 0 {
 		if source == "" {
-			return "", "", nil, fmt.Errorf("source is required")
+			return "", "", nil, fmt.Errorf("code source url is required")
 		}
 		if _, err = url.ParseRequestURI(source); err != nil {
 			return "", "", nil, fmt.Errorf("source: %s", err)
@@ -271,7 +271,7 @@ func ProposalInstantiateContract2Cmd() *cobra.Command {
 func ProposalStoreAndInstantiateContractCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "store-instantiate [wasm file] [json_encoded_init_args] --label [text] --title [text] --description [text] --run-as [address]" +
-			"--unpin-code [unpin_code,optional] --source [source,optional] --builder [builder,optional] --code-hash [code_hash,optional] --admin [address,optional] --amount [coins,optional]",
+			"--unpin-code [unpin_code,optional] --code-source-url [source] --builder [builder,optional] --code-hash [code_hash,optional] --admin [address,optional] --amount [coins,optional]",
 		Short: "Submit and instantiate a wasm contract proposal",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
